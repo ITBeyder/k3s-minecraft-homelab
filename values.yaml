@@ -1,0 +1,16 @@
+image: itzg/minecraft-server
+imageTag: java25
+
+nodeSelector:
+  "node-role.kubernetes.io/worker": "worker"
+
+resources:
+  requests:
+    memory: 2Gi
+    cpu: 1
+
+minecraftServer:
+  # This must be overridden, since we can't accept this for the user.
+  eula: "TRUE"
+  onlineMode: false
+    memory: 1024M

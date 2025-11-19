@@ -1,4 +1,6 @@
 # Kubernetes Minecraft Home Lab
+Medium Article Link : https://medium.com/@itaybeyder_76401/35d01acb0e9c
+
 A complete guide and IaC setup for deploying Minecraft on a Raspberry Pi K3s cluster secured behind a FortiGate firewall.
 
 ## Prerequisites
@@ -228,3 +230,66 @@ scp rpi@10.10.1.2:/etc/rancher/k3s/k3s.yaml ~/.kube/config
 
 `sed -i 's/127.0.0.1/10.10.1.2/' ~/.kube/config`
 
+
+## Step 4 - Deploy Minecraft using Helm
+
+Add the Bitnami Helm repository:
+
+`helm repo add stable https://charts.helm.sh/stable`
+
+Update your Helm repositories:
+
+`helm repo update`
+
+Create a values.yaml file with the following content:
+```yaml
+
+image: itzg/minecraft-server
+imageTag: java25
+
+nodeSelector:
+  "node-role.kubernetes.io/worker": "worker"
+
+resources:
+  requests:
+    memory: 2Gi
+    cpu: 1
+
+minecraftServer:
+  # This must be overridden, since we can't accept this for the user.
+  eula: "TRUE"
+  onlineMode: false
+    memory: 1024M
+```
+
+notice that we had to change couple of default values in order to make the server run on our home lab setup.
+- We set `onlineMode: false` because we are running in a local network without internet access.
+- We set `nodeSelector` to ensure the pod runs on the worker node.
+- We adjusted resource requests to fit the Raspberry Pi capabilities.
+- We set `eula: "TRUE"` to accept the Minecraft EULA.
+- We set the image tag to `java25` to ensure compatibility with ARM architecture.
+
+Deploy the Minecraft server using Helm with the custom values:
+
+`helm upgrade minecraft --install --create-namespace=true -n -f values.yaml stable/minecraft`
+
+
+Verify the deployment:
+`kubectl get pods -n apps`
+
+### Access the Minecraft server
+
+get loadbalancer IP (in our case its the node ip since we are running on home lab without cloud LBs)
+`kubectl get svc -o wide`
+
+```
+➜  k3s-minecraft-homelab git:(main) ✗ kubectl get svc -n apps
+Found existing alias for "kubectl". You should use: "k"
+NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP           PORT(S)           AGE
+minecraft-minecraft   LoadBalancer   10.43.177.241   10.10.1.2,10.10.2.2   25565:32192/TCP   63m
+```
+downlaod minecraft client from `https://skmedix.pl/downloads`
+
+Connect to the Minecraft server using the node IP and port `10.10.1.2:32192` or `10.10.2.2:32192`
+
+Enjoy your Minecraft server running on your Raspberry Pi K3s cluster!
